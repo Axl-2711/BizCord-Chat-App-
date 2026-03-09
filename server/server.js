@@ -1,27 +1,38 @@
 import express from 'express';
-import cors from 'cors';
 import http from 'http';
 import dotenv from 'dotenv';
+import path from 'path';
 import { Server } from 'socket.io';
 dotenv.config();
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, {
-    cors: {
-        origin: `http://localhost:${process.env.PORT || 3000}`,
-        methods: ['GET', 'PUT']
-    }
-});
 
+const io = new Server(server)
+
+//RUN WHEN CLIENT CONNECTS
 io.on('connection', (socket) => {
-    console.log(socket.id);
 
+    // Send user a welcome message
+    socket.emit('message', 'Welcome to BizCord')
+
+    // Broadcast to all users except the current user
+    socket.broadcast.emit('message', 'A user has joined the chat')
+
+    // Runs when client disconnects
     socket.on('disconnect', () => {
-        console.log('User Disconnected', socket.id);
+        io.emit('message', 'A user has left the chat')
     });
+
+    // Listen for chatMessage
+    socket.on('chatMessage', (msg) => {
+        io.emit('message', msg)
+    })
 });
 
-server.listen(process.env.PORT || 3001, () => {
+app.use(express.static(path.join(path.resolve(), '/public')));
+
+
+server.listen(process.env.PORT || 300, () => {
     console.log(`SERVER RUNNING ON PORT ${process.env.PORT || 3000}`);
 });
