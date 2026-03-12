@@ -3,7 +3,8 @@ import http from 'http';
 import dotenv from 'dotenv';
 import path from 'path';
 import { Server } from 'socket.io';
-import { formatMessage } from '../utils/messages.js';
+import { formatMessage } from './utils/messages.js';
+import { userJoin, getConnectedUser } from './utils/users.js'
 dotenv.config();
 
 const app = express();
@@ -18,13 +19,16 @@ io.on('connection', (socket) => {
 
     // User Joins room
     socket.on('joinRoom', ({ username, room }) => {
-        socket.join(room)
+        const user = userJoin(socket.id, username, room)
+
+
+        socket.join(user.room)
 
         // Send user a welcome message
         socket.emit('message', formatMessage(botName, `Welcome to ${botName}`));
 
         // Broadcast to all users except the current user
-        socket.broadcast.to(room).emit('message', formatMessage(botName, `${username} has joined the chat`));
+        socket.broadcast.to(user.room).emit('message', formatMessage(botName, `${username} has joined the chat`));
     })
 
 
