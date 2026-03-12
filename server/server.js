@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { Server } from 'socket.io';
 import { formatMessage } from './utils/messages.js';
-import { userJoin, getConnectedUser } from './utils/users.js'
+import { userJoin, getConnectedUser, userLeave, getRoomUsers } from './utils/users.js'
 dotenv.config();
 
 const app = express();
@@ -21,26 +21,45 @@ io.on('connection', (socket) => {
     socket.on('joinRoom', ({ username, room }) => {
         const user = userJoin(socket.id, username, room)
 
-
         socket.join(user.room)
 
         // Send user a welcome message
-        socket.emit('message', formatMessage(botName, `Welcome to ${botName}`));
+        socket.emit('message', formatMessage(botName, `Welcome to BizCord`));
 
         // Broadcast to all users except the current user
-        socket.broadcast.to(user.room).emit('message', formatMessage(botName, `${username} has joined the chat`));
+        socket.broadcast.to(user.room).emit('message', formatMessage(botName, `${user.username} has joined the chat`));
+
+        // console.log(user.room)
+
+        // Send users and room info
+        io.to(user.room).emit('roomUsers', {
+            room: user.room,
+            users: getRoomUsers(user.room)
+        })
+
     })
 
 
 
     // Runs when client disconnects
     socket.on('disconnect', () => {
-        io.emit('message', formatMessage(botName, 'A user has left the chat'))
+        const user = userLeave(socket.id);
+
+        if (user) {
+            io.to(user.room).emit('message', formatMessage(botName, `${user.username} has left the chat`));
+        }
+
+        io.to(user.room).emit('roomUsers', {
+            room: user.room,
+            users: getRoomUsers(user.room)
+        })
     });
 
     // Listen for chatMessage
     socket.on('chatMessage', (msg) => {
-        io.emit('message', formatMessage('USER', msg))
+        const user = getConnectedUser(socket.id);
+        if (!user) return;
+        io.to(user.room).emit('message', formatMessage(user.username, msg));
     })
 });
 

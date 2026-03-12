@@ -11,5 +11,3 @@ export const formatMessage = (username, text) => {
         time: formattedTime,
     };
 };
-
-   
